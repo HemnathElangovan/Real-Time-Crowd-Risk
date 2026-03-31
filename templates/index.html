@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crowd Risk Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#0f1218; --panel:#171b23; --panel2:#1d232e; --line:#2a313e;
+      --text:#f3f6fa; --muted:#a4afbf; --good:#34c759; --warn:#ff9f0a; --bad:#ff453a; --accent:#5ac8fa;
+      --r-xl:16px; --r-lg:12px; --shadow:0 14px 32px rgba(0,0,0,.28);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--text); font-family: "Inter", system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 10% -10%, rgba(90,200,250,.08), transparent 36%), var(--bg);
+    }
+    .app { min-height: 100vh; display: grid; grid-template-rows: auto auto 1fr; gap: 14px; padding: 14px; }
+    .card { background: rgba(23,27,35,.92); border: 1px solid var(--line); border-radius: var(--r-xl); box-shadow: var(--shadow); }
+    .title-sm { margin: 0 0 10px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; font-family: "JetBrains Mono", monospace; }
+    .pill { border: 1px solid transparent; border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 700; letter-spacing: .03em; white-space: nowrap; }
+    .pill.LOW { color: #b8f4c8; background: rgba(52,199,89,.18); border-color: rgba(52,199,89,.4); }
+    .pill.MEDIUM { color: #ffe0b0; background: rgba(255,159,10,.2); border-color: rgba(255,159,10,.42); }
+    .pill.HIGH { color: #ffd0cb; background: rgba(255,69,58,.2); border-color: rgba(255,69,58,.44); }
+    .btn { height: 38px; border-radius: 10px; border: 1px solid rgba(90,200,250,.58); background: rgba(90,200,250,.08); color: #d2f4ff; font-family: "JetBrains Mono", monospace; font-size: 12px; font-weight: 700; cursor: pointer; padding: 0 12px; }
+
+    .topbar { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; }
+    .brand h1 { margin: 0; font-size: 20px; font-weight: 800; }
+    .brand p { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+    .status { display: flex; align-items: center; gap: 14px; color: var(--muted); font-size: 13px; font-family: "JetBrains Mono", monospace; }
+    .live { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 6px 10px; color: #d1fadf; border: 1px solid rgba(52,199,89,.3); background: rgba(52,199,89,.14); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good); box-shadow: 0 0 10px rgba(52,199,89,.8); animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(1.35);opacity:.55;} }
+
+    .risk-strip { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; padding: 10px 16px; font-family: "JetBrains Mono", monospace; }
+    .tag { font-size: 12px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+    .metric { color: #d8dfea; font-size: 13px; } .metric b { margin-right: 4px; color: #fff; font-size: 18px; }
+
+    .main { min-height: 0; display: grid; grid-template-columns: minmax(0,1.8fr) minmax(330px,1fr); gap: 14px; }
+    .cam-grid { display: grid; height: 100%; grid-template-columns: 1fr 1fr; grid-template-rows: minmax(250px,1fr) minmax(270px,1fr); gap: 14px; }
+    .cam-card { border: 1px solid var(--line); border-radius: var(--r-xl); overflow: hidden; background: var(--panel); position: relative; box-shadow: var(--shadow); }
+    .cam-card.wide { grid-column: 1 / -1; }
+    .cam-header { height: 46px; display: flex; justify-content: space-between; align-items: center; padding: 0 12px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg,#212730,#1b212b); }
+    .cam-name { font-size: 14px; font-weight: 700; } .cam-right { display: flex; align-items: center; gap: 8px; }
+    .health { border-radius: 999px; border: 1px solid transparent; padding: 4px 8px; font-size: 11px; font-weight: 700; font-family: "JetBrains Mono", monospace; }
+    .health.ONLINE { color: #b8f4c8; background: rgba(52,199,89,.18); border-color: rgba(52,199,89,.4); }
+    .health.RECONNECTING { color: #ffe0b0; background: rgba(255,159,10,.2); border-color: rgba(255,159,10,.42); }
+    .health.OFFLINE { color: #ffd0cb; background: rgba(255,69,58,.2); border-color: rgba(255,69,58,.44); }
+    .feed-wrap { position: absolute; top: 46px; inset-inline: 0; bottom: 0; background: #10131a; }
+    .feed-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .overlay { position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; justify-content: space-between; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.45); font-size: 13px; font-weight: 600; }
+    .overlay .fps { color: #c5cdd8; font-size: 12px; font-weight: 500; }
+    .cam-card.high { box-shadow: inset 0 0 0 2px rgba(255,69,58,.9), var(--shadow); animation: dangerPulse .9s infinite alternate; }
+    @keyframes dangerPulse { from{box-shadow: inset 0 0 0 1px rgba(255,69,58,.45), var(--shadow);} to{box-shadow: inset 0 0 0 3px rgba(255,69,58,.95), var(--shadow);} }
+
+    .sidebar { height: 100%; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--panel); box-shadow: var(--shadow); }
+    .block { border-bottom: 1px solid var(--line); padding: 14px; } .block:last-child { border-bottom: none; }
+    .zone-row { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px; align-items: center; border-top: 1px solid rgba(42,49,62,.85); padding: 8px 0; font-size: 13px; }
+    .zone-row:first-child { border-top: none; } .zdot { width: 8px; height: 8px; border-radius: 50%; }
+    .zdot.low { background: var(--good); } .zdot.med { background: var(--warn); } .zdot.high { background: var(--bad); } .zcount { font-weight: 700; }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat-card { border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--panel2); padding: 12px; }
+    .stat-v { font-size: 30px; line-height: 1; font-weight: 800; } .stat-k { margin-top: 4px; color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+    #liveChart { width: 100%; height: 92px; border: 1px solid var(--line); border-radius: var(--r-lg); background: #1a2029; display: block; }
+    .log { max-height: 170px; overflow-y: auto; }
+    .log-item { display: grid; grid-template-columns: 8px 1fr; gap: 8px; border-top: 1px solid rgba(42,49,62,.85); padding: 8px 0; }
+    .log-item:first-child { border-top: none; } .log-time { color: var(--muted); font-size: 11px; } .log-msg { font-size: 13px; line-height: 1.34; }
+    .control-row { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; font-size: 14px; color: #d8dee8; }
+    .switch { width: 46px; height: 24px; position: relative; } .switch input { display: none; }
+    .slider { position: absolute; inset: 0; border-radius: 999px; background: #323a48; border: 1px solid #445062; cursor: pointer; }
+    .slider:before { content: ""; position: absolute; width: 18px; height: 18px; left: 3px; top: 2px; border-radius: 50%; background: #c8ced8; transition: .2s; }
+    .switch input:checked + .slider { background: rgba(90,200,250,.26); border-color: rgba(90,200,250,.6); } .switch input:checked + .slider:before { transform: translateX(21px); background: #e0f7ff; }
+
+    .toast { position: fixed; right: 14px; top: 14px; z-index: 1000; border-radius: 10px; border: 1px solid #495669; background: #1f2734; color: #e8edf6; font-size: 12px; padding: 10px 12px; opacity: 0; transform: translateY(-8px); pointer-events: none; }
+    .toast.show { opacity: 1; transform: translateY(0); transition: .2s ease; }
+
+    @media (max-width: 1200px) { .main { grid-template-columns: 1fr; } .cam-grid { min-height: 700px; } }
+    @media (max-width: 760px) {
+      .app { padding: 10px; gap: 10px; } .card { border-radius: 12px; } .topbar { padding: 12px; } .brand h1 { font-size: 16px; } .brand p { display: none; }
+      .cam-grid { grid-template-columns: 1fr; grid-template-rows: repeat(3,minmax(220px,1fr)); } .cam-card.wide { grid-column: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar card">
+      <div class="brand">
+        <h1>Crowd Risk Detection</h1>
+        <p>Real-time monitoring · Multi-camera safety dashboard</p>
+      </div>
+      <div class="status">
+        <span class="live"><span class="dot"></span>LIVE</span>
+        <span id="clock">--:--:--</span>
+      </div>
+    </header>
+
+    <section class="risk-strip card">
+      <span class="tag">System Risk</span>
+      <span class="pill LOW" id="overallRisk">LOW</span>
+      <span class="metric"><b id="activeZones">0/0</b> active zones</span>
+      <span class="metric"><b id="totalCount">0</b> persons</span>
+      <span class="metric"><b id="avgFps">0.0</b> avg fps</span>
+    </section>
+
+    <main class="main">
+      <section>
+        <div class="cam-grid">
+          {% for cam in cameras %}
+          <article class="cam-card {% if loop.index == 3 %}wide{% endif %}" id="cam-{{ cam.id }}">
+            <div class="cam-header">
+              <span class="cam-name" id="name-{{ cam.id }}">{{ cam.name }}</span>
+              <div class="cam-right">
+                <span class="health OFFLINE" id="health-{{ cam.id }}">OFFLINE</span>
+                <span class="pill LOW" id="badge-{{ cam.id }}">LOW</span>
+              </div>
+            </div>
+            <div class="feed-wrap">
+              <img src="/video_feed/{{ cam.id }}" alt="{{ cam.name }} feed">
+              <div class="overlay"><span id="count-{{ cam.id }}">0 persons</span><span class="fps" id="fps-{{ cam.id }}">0.0 FPS</span></div>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+      </section>
+
+      <aside class="sidebar">
+        <section class="block">
+          <h3 class="title-sm">Zone Summary</h3>
+          <div id="zoneSummary"></div>
+        </section>
+        <section class="block">
+          <h3 class="title-sm">Live Statistics</h3>
+          <div class="stats-grid">
+            <div class="stat-card"><div id="statTotal" class="stat-v">0</div><div class="stat-k">Total Count</div></div>
+            <div class="stat-card"><div id="statAlerts" class="stat-v">0</div><div class="stat-k">Alerts Today</div></div>
+            <div class="stat-card"><div id="statPeak" class="stat-v">0</div><div class="stat-k">Peak Count</div></div>
+            <div class="stat-card"><div id="statAvg" class="stat-v">0.0</div><div class="stat-k">Avg FPS</div></div>
+          </div>
+        </section>
+        <section class="block">
+          <h3 class="title-sm">Count History (60s)</h3>
+          <canvas id="liveChart"></canvas>
+        </section>
+        <section class="block">
+          <h3 class="title-sm">Alert Log</h3>
+          <div class="log" id="alertLog"></div>
+        </section>
+        <section class="block">
+          <h3 class="title-sm">Controls</h3>
+          <div class="control-row"><span>Sound alerts</span><label class="switch"><input id="soundToggle" type="checkbox" checked><span class="slider"></span></label></div>
+          <div class="control-row"><span>WhatsApp alerts</span><label class="switch"><input id="waToggle" type="checkbox" checked><span class="slider"></span></label></div>
+          <div class="control-row"><span>Email alerts</span><label class="switch"><input id="emailToggle" type="checkbox"><span class="slider"></span></label></div>
+          <button class="btn" id="snapshotAllBtn">Snapshot all cameras</button>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script id="cameraData" type="application/json">{{ cameras|tojson }}</script>
+  <script>
+    const cameras = JSON.parse(document.getElementById("cameraData").textContent || "[]");
+    const liveHistory = [];
+    let alertCount = 0, peakCount = 0, seenAlerts = new Set(), toastTimer = null;
+
+    const riskClass = (v) => (v === "LOW" || v === "MEDIUM" || v === "HIGH") ? v : "LOW";
+    function showToast(msg, err = false) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.style.borderColor = err ? "#7b4343" : "#495669";
+      el.style.color = err ? "#ffd5d1" : "#e8edf6";
+      el.classList.add("show");
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove("show"), 2500);
+    }
+    function updateClock() {
+      document.getElementById("clock").textContent = new Date().toLocaleTimeString("en-IN", { hour12: false });
+    }
+    function drawLineChart(values) {
+      const canvas = document.getElementById("liveChart"), ctx = canvas.getContext("2d");
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      canvas.width = w * window.devicePixelRatio; canvas.height = h * window.devicePixelRatio; ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      ctx.clearRect(0, 0, w, h);
+      ctx.strokeStyle = "rgba(164,175,191,0.22)"; ctx.lineWidth = 1;
+      [0.25, 0.5, 0.75].forEach((p) => { const y = h * p; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); });
+      if (!values || values.length < 2) return;
+      const max = Math.max(...values, 1), min = Math.min(...values, 0), span = Math.max(max - min, 1);
+      ctx.beginPath();
+      values.forEach((v, i) => {
+        const x = (i / (values.length - 1)) * (w - 2) + 1;
+        const y = h - ((v - min) / span) * (h - 8) - 4;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = "rgba(90,200,250,0.92)"; ctx.lineWidth = 2.2; ctx.stroke();
+    }
+    function renderZoneSummary(zones) {
+      const box = document.getElementById("zoneSummary");
+      box.innerHTML = Object.entries(zones).sort((a, b) => Number(a[0]) - Number(b[0])).map(([id, z]) => {
+        const r = riskClass(z.risk), dot = r === "HIGH" ? "high" : (r === "MEDIUM" ? "med" : "low");
+        return `<div class="zone-row"><span class="zdot ${dot}"></span><span>${z.name || `Zone ${id}`}</span><span class="zcount">${z.count || 0}</span><span class="pill ${r}">${r}</span></div>`;
+      }).join("") || `<div class="zone-row"><span style="color:var(--muted)">No zone data</span></div>`;
+    }
+    function addAlertLog(risk, count, ts, zoneName) {
+      const key = `${risk}|${count}|${ts}|${zoneName}`;
+      if (seenAlerts.has(key)) return;
+      seenAlerts.add(key);
+      if (seenAlerts.size > 180) seenAlerts = new Set(Array.from(seenAlerts).slice(-120));
+      alertCount += 1;
+      document.getElementById("statAlerts").textContent = String(alertCount);
+      const dot = risk === "HIGH" ? "high" : (risk === "MEDIUM" ? "med" : "low");
+      const log = document.getElementById("alertLog");
+      const item = document.createElement("div");
+      item.className = "log-item";
+      item.innerHTML = `<span class="zdot ${dot}"></span><div><div class="log-time">${ts || new Date().toLocaleTimeString()}</div><div class="log-msg">${risk} - ${count} persons @ ${zoneName}</div></div>`;
+      log.insertBefore(item, log.firstChild);
+      while (log.children.length > 24) log.removeChild(log.lastChild);
+    }
+    async function saveControls() {
+      const payload = {
+        sound: document.getElementById("soundToggle").checked,
+        whatsapp: document.getElementById("waToggle").checked,
+        email: document.getElementById("emailToggle").checked
+      };
+      try {
+        await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      } catch (_) { showToast("Failed to save controls", true); }
+    }
+    async function snapshotAll() {
+      let ok = 0;
+      for (const cam of cameras) {
+        try {
+          const res = await fetch(`/api/snapshot/${cam.id}`, { method: "POST" });
+          const data = await res.json();
+          if (res.ok && data.ok) ok += 1;
+        } catch (_) {}
+      }
+      if (ok > 0) showToast(`Snapshots saved: ${ok}/${cameras.length}`); else showToast("Snapshot failed for all cameras", true);
+    }
+    async function pollLive() {
+      try {
+        const res = await fetch("/api/status");
+        const data = await res.json();
+        const zones = data.zones || {}, overall = riskClass(data.overall || "LOW");
+        const total = Object.values(zones).reduce((s, z) => s + (z.count || 0), 0);
+        const fpsArr = Object.values(zones).map((z) => Number(z.fps || 0));
+        const avg = fpsArr.length ? fpsArr.reduce((a, b) => a + b, 0) / fpsArr.length : 0;
+        document.getElementById("overallRisk").className = `pill ${overall}`;
+        document.getElementById("overallRisk").textContent = overall;
+        document.getElementById("activeZones").textContent = `${Object.keys(zones).length}/${cameras.length}`;
+        document.getElementById("totalCount").textContent = String(total);
+        document.getElementById("avgFps").textContent = avg.toFixed(1);
+        peakCount = Math.max(peakCount, total);
+        document.getElementById("statTotal").textContent = String(total);
+        document.getElementById("statPeak").textContent = String(peakCount);
+        document.getElementById("statAvg").textContent = avg.toFixed(1);
+        Object.entries(zones).forEach(([id, z]) => {
+          const camId = Number(id), risk = riskClass(z.risk), health = z.health || "OFFLINE";
+          const badge = document.getElementById(`badge-${camId}`), healthEl = document.getElementById(`health-${camId}`);
+          const name = document.getElementById(`name-${camId}`), count = document.getElementById(`count-${camId}`), fps = document.getElementById(`fps-${camId}`);
+          if (badge) { badge.className = `pill ${risk}`; badge.textContent = risk; }
+          if (healthEl) { healthEl.className = `health ${health}`; healthEl.textContent = health; }
+          if (name) name.textContent = z.name || `Zone ${camId}`;
+          if (count) count.textContent = `${z.count || 0} persons`;
+          if (fps) fps.textContent = `${Number(z.fps || 0).toFixed(1)} FPS`;
+          if (camId === 2) {
+            const card = document.getElementById(`cam-${camId}`);
+            if (card) card.classList.toggle("high", risk === "HIGH");
+          }
+          if (z.alert_fired) addAlertLog(risk, z.count || 0, z.alert_time || "", z.name || `Zone ${camId}`);
+        });
+        renderZoneSummary(zones);
+        liveHistory.push(total);
+        if (liveHistory.length > 60) liveHistory.shift();
+        drawLineChart(liveHistory.length ? liveHistory : [0, 0]);
+      } catch (_) { showToast("Live status sync failed", true); }
+    }
+
+    document.getElementById("soundToggle").addEventListener("change", saveControls);
+    document.getElementById("waToggle").addEventListener("change", saveControls);
+    document.getElementById("emailToggle").addEventListener("change", saveControls);
+    document.getElementById("snapshotAllBtn").addEventListener("click", snapshotAll);
+    updateClock();
+    pollLive();
+    setInterval(updateClock, 1000);
+    setInterval(pollLive, 1000);
+  </script>
+</body>
+</html>
