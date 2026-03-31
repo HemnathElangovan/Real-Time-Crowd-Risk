@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: crowd-risk-v2
+    runtime: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /api/status
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: WEB_PORT
+        value: 10000

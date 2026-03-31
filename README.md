@@ -111,3 +111,28 @@ http://localhost:5050
   - `/video_feed/<cam_id>`
   - `/api/logs/<cam_id>`
 - If DB is unavailable, detection/dashboard continues running and prints `[DB]` warnings.
+
+## 9) Deploy from GitHub (Render)
+
+This repo includes deployment files for Render:
+- `Dockerfile`
+- `.dockerignore`
+- `render.yaml`
+
+### Steps
+
+1. Push latest code to GitHub.
+2. In Render, create **New Web Service** from your GitHub repo.
+3. Render will detect Docker automatically.
+4. Set environment variables in Render dashboard:
+   - `PORT=10000`
+   - `WEB_PORT=10000`
+   - `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`
+   - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
+   - `WHATSAPP_RECIPIENTS`, `EMAIL_SENDER`, `EMAIL_APP_PASSWORD`
+5. Deploy and open the service URL.
+
+### Important camera note
+
+If camera sources use private LAN IPs (for example `192.168.x.x`, `172.x.x.x`, `10.x.x.x`), a cloud host cannot access them directly.
+Use publicly reachable streams, a tunnel/VPN, or deploy on a machine in the same local network as the cameras.

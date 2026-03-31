@@ -90,7 +90,8 @@ LOG_INTERVAL_SECONDS = 1
 DB_EVENT_LOG_INTERVAL_SECONDS = int(os.getenv("DB_EVENT_LOG_INTERVAL_SECONDS", "1"))
 
 # ── Web UI Server ────────────────────────────────────────────
-WEB_PORT = int(os.getenv("WEB_PORT", "5050"))
+# Supports local WEB_PORT and cloud platforms (PORT).
+WEB_PORT = int(os.getenv("WEB_PORT", os.getenv("PORT", "5050")))
 WEB_HOST = os.getenv("WEB_HOST", "0.0.0.0")
 FRAME_WIDTH = int(os.getenv("FRAME_WIDTH", "1280"))
 FRAME_HEIGHT = int(os.getenv("FRAME_HEIGHT", "720"))
